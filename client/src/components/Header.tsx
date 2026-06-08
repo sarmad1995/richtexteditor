@@ -1,9 +1,15 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
+
+const TITLE_KEY = 'rte_doc_title'
 
 export function Header() {
-  const [title, setTitle] = useState('Untitled document')
+  const [title, setTitle] = useState(() => localStorage.getItem(TITLE_KEY) ?? 'Untitled document')
   const [isEditing, setIsEditing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    localStorage.setItem(TITLE_KEY, title)
+  }, [title])
 
   const startEditing = () => {
     setIsEditing(true)

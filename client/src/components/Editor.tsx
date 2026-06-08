@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
@@ -7,6 +7,8 @@ import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin'
 import { ListPlugin } from '@lexical/react/LexicalListPlugin'
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary'
 import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin'
+import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin'
+import type { EditorState } from 'lexical'
 import {
   HEADING,
   QUOTE,
@@ -28,6 +30,8 @@ import { CodeNode, CodeHighlightNode } from '@lexical/code'
 import { Toolbar } from './Toolbar'
 import { ToolbarPlugin } from './plugins/ToolbarPlugin'
 import type { ToolbarState } from './types'
+
+const STORAGE_KEY = 'rte_editor_state'
 
 const MD_TRANSFORMERS = [
   HEADING, QUOTE, CODE,
@@ -82,8 +86,18 @@ export function Editor() {
     setToolbarState(state)
   }, [])
 
+  const handleChange = useCallback((editorState: EditorState) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(editorState.toJSON()))
+  }, [])
+
+  // useMemo so the config (including saved state) is only computed once on mount
+  const config = useMemo(() => ({
+    ...initialConfig,
+    editorState: localStorage.getItem(STORAGE_KEY) ?? undefined,
+  }), [])
+
   return (
-    <LexicalComposer initialConfig={initialConfig}>
+    <LexicalComposer initialConfig={config}>
       <div className="flex flex-col h-full">
         <Toolbar state={toolbarState} />
         <div className="flex-1 relative overflow-y-auto">
@@ -104,6 +118,7 @@ export function Editor() {
           <HistoryPlugin />
           <AutoFocusPlugin />
           <ListPlugin />
+          <OnChangePlugin onChange={handleChange} />
           <MarkdownShortcutPlugin transformers={MD_TRANSFORMERS} />
           <ToolbarPlugin onStateChange={handleStateChange} />
         </div>
