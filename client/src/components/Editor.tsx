@@ -30,6 +30,8 @@ import { CodeNode, CodeHighlightNode } from '@lexical/code'
 import { DrawingNode } from './nodes/DrawingNode'
 import { Toolbar } from './Toolbar'
 import { ToolbarPlugin } from './plugins/ToolbarPlugin'
+import { FloatingToolbarPlugin } from './plugins/FloatingToolbarPlugin'
+import { SlashCommandPlugin } from './plugins/SlashCommandPlugin'
 import type { ToolbarState } from './types'
 
 const STORAGE_KEY = 'rte_editor_state'
@@ -122,6 +124,8 @@ export function Editor() {
           <OnChangePlugin onChange={handleChange} />
           <MarkdownShortcutPlugin transformers={MD_TRANSFORMERS} />
           <ToolbarPlugin onStateChange={handleStateChange} />
+          <FloatingToolbarPlugin />
+          <SlashCommandPlugin />
         </div>
       </div>
     </LexicalComposer>
