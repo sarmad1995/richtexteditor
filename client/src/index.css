@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f8f8f8;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Lexical editor content styles */
+.editor-content {
+  outline: none;
+  min-height: 100%;
+  color: #1a1a1a;
+  font-size: 16px;
+  line-height: 1.7;
+  caret-color: #6366f1;
+}
+
+.editor-content p {
+  margin: 0 0 4px;
+}
+
+.editor-content h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 24px 0 8px;
+  color: #111;
+  letter-spacing: -0.5px;
+}
+
+.editor-content h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 20px 0 6px;
+  color: #111;
+  letter-spacing: -0.3px;
+}
+
+.editor-content h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 16px 0 4px;
+  color: #111;
+}
+
+.editor-content ul,
+.editor-content ol {
+  padding-left: 24px;
+  margin: 4px 0;
+}
+
+.editor-content li {
+  margin: 2px 0;
+}
+
+.editor-content strong {
+  font-weight: 600;
+  color: #111;
+}
+
+.editor-content em {
+  font-style: italic;
+}
+
+.editor-content s {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.editor-content code {
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.875em;
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 2px 5px;
+  color: #d946ef;
+}
+
+/* Blockquote */
+.editor-quote {
+  border-left: 3px solid #6366f1;
+  padding: 4px 0 4px 16px;
+  margin: 8px 0;
+  color: #555;
+  font-style: italic;
+}
+
+/* Code block (``` fenced) */
+.editor-code-block {
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.875rem;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 12px 0;
+  display: block;
+  overflow-x: auto;
+  line-height: 1.6;
+}
+
+/* Inline code (`backtick`) */
+.editor-inline-code {
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.875em;
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 2px 5px;
+  color: #d946ef;
+}
+
+/* Lexical placeholder */
+.editor-placeholder {
+  color: #aaa;
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  user-select: none;
+  font-size: 16px;
+}
