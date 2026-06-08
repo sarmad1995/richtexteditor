@@ -27,6 +27,7 @@ import {
 import { HeadingNode, QuoteNode } from '@lexical/rich-text'
 import { ListNode, ListItemNode } from '@lexical/list'
 import { CodeNode, CodeHighlightNode } from '@lexical/code'
+import { DrawingNode } from './nodes/DrawingNode'
 import { Toolbar } from './Toolbar'
 import { ToolbarPlugin } from './plugins/ToolbarPlugin'
 import type { ToolbarState } from './types'
@@ -44,7 +45,7 @@ const MD_TRANSFORMERS = [
 
 const initialConfig = {
   namespace: 'RichTextEditor',
-  nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, CodeNode, CodeHighlightNode],
+  nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, CodeNode, CodeHighlightNode, DrawingNode],
   onError(error: Error) {
     console.error(error)
   },

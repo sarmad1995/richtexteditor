@@ -14,6 +14,8 @@ import {
   REMOVE_LIST_COMMAND,
 } from '@lexical/list'
 import { $setBlocksType } from '@lexical/selection'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
+import { $createDrawingNode } from './nodes/DrawingNode'
 import type { BlockType, ToolbarState } from './types'
 
 interface ToolbarProps {
@@ -61,6 +63,12 @@ export function Toolbar({ state }: ToolbarProps) {
     },
     [editor],
   )
+
+  const insertDrawing = useCallback(() => {
+    editor.update(() => {
+      $insertNodeToNearestRoot($createDrawingNode())
+    })
+  }, [editor])
 
   const setBlockType = useCallback(
     (type: BlockType) => {
@@ -131,6 +139,12 @@ export function Toolbar({ state }: ToolbarProps) {
       <ToolbarButton active={blockType === 'number'} onClick={() => setBlockType('number')} title="Numbered list">
         <ListNumberIcon />
       </ToolbarButton>
+
+      <ToolbarDivider />
+
+      <ToolbarButton active={false} onClick={insertDrawing} title="Insert drawing canvas">
+        <DrawingIcon />
+      </ToolbarButton>
     </div>
   )
 }
@@ -157,6 +171,16 @@ function ListNumberIcon() {
       <rect x="6" y="3.75" width="8" height="1.5" rx="0.75" fill="currentColor" />
       <rect x="6" y="7.25" width="8" height="1.5" rx="0.75" fill="currentColor" />
       <rect x="6" y="10.75" width="8" height="1.5" rx="0.75" fill="currentColor" />
+    </svg>
+  )
+}
+
+function DrawingIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M2 13.5C2 13.5 4 12 6 10C8 8 9 6 10.5 5C12 4 13.5 4.5 13.5 6C13.5 7.5 12 8 11 8.5C10 9 9 10 9 11.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      <circle cx="9" cy="12.5" r="1" fill="currentColor"/>
+      <path d="M3 13L2 14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
     </svg>
   )
 }
