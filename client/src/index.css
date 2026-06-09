@@ -117,6 +117,36 @@ body {
   color: #d946ef;
 }
 
+/* ── Collaboration cursors (injected by @lexical/yjs) ──────────────────────── */
+
+/* The caret line itself */
+.collaboration-cursor__caret {
+  position: relative;
+  margin-left: -1px;
+  margin-right: -1px;
+  border-left: 2px solid;   /* color set inline by Lexical */
+  border-right: none;
+  word-break: normal;
+  pointer-events: none;
+}
+
+/* Name label above the caret */
+.collaboration-cursor__label {
+  position: absolute;
+  top: -1.6em;
+  left: -2px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px 4px 4px 0;
+  color: #fff;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+  /* background-color is set inline by Lexical to match cursorColor */
+}
+
 /* Lexical placeholder */
 .editor-placeholder {
   color: #aaa;
