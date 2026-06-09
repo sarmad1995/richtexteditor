@@ -23,7 +23,7 @@ interface ToolbarProps {
 }
 
 function ToolbarDivider() {
-  return <div className="w-px h-5 bg-gray-200 mx-1" />
+  return <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" />
 }
 
 interface ToolbarButtonProps {
@@ -43,8 +43,8 @@ function ToolbarButton({ active, onClick, title, children }: ToolbarButtonProps)
         flex items-center justify-center w-8 h-8 rounded-md text-sm font-medium
         transition-colors duration-100 cursor-pointer select-none
         ${active
-          ? 'bg-indigo-100 text-indigo-700'
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+          ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
         }
       `}
     >
@@ -102,7 +102,7 @@ export function Toolbar({ state }: ToolbarProps) {
   )
 
   return (
-    <div className="flex items-center gap-0.5 px-3 py-2 border-b border-gray-200 bg-white flex-wrap">
+    <div className="flex items-center gap-0.5 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-wrap transition-colors duration-200">
       <ToolbarButton active={isBold} onClick={() => formatText('bold')} title="Bold (⌘B)">
         <span className="font-bold">B</span>
       </ToolbarButton>

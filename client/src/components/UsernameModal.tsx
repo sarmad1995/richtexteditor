@@ -16,7 +16,7 @@ export function UsernameModal({ onConfirm }: Props) {
   return (
     // Full-screen overlay
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-8">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-8 border border-transparent dark:border-gray-700">
         {/* Icon */}
         <div className="flex justify-center mb-5">
           <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
@@ -27,10 +27,10 @@ export function UsernameModal({ onConfirm }: Props) {
           </div>
         </div>
 
-        <h2 className="text-lg font-semibold text-gray-900 text-center mb-1">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 text-center mb-1">
           What's your name?
         </h2>
-        <p className="text-sm text-gray-400 text-center mb-6">
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center mb-6">
           Your name will appear on your cursor so collaborators can see you.
         </p>
 
@@ -42,7 +42,7 @@ export function UsernameModal({ onConfirm }: Props) {
             value={value}
             onChange={e => setValue(e.target.value)}
             maxLength={32}
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition"
+            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 transition"
           />
           <button
             type="submit"

@@ -190,7 +190,7 @@ function SlashCommandMenu({ commands, selectedIndex, onSelect }: SlashMenuProps)
       style={{ position: 'fixed' }}
       // Prevent the editor from losing focus when interacting with the menu
       onMouseDown={e => e.preventDefault()}
-      className="z-50 w-60 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
+      className="z-50 w-60 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
     >
       <div className="py-1 max-h-72 overflow-y-auto">
         {commands.map((cmd, i) => (
@@ -202,24 +202,28 @@ function SlashCommandMenu({ commands, selectedIndex, onSelect }: SlashMenuProps)
             className={`
               w-full flex items-center gap-3 px-3 py-2 text-left
               transition-colors duration-75
-              ${i === selectedIndex ? 'bg-indigo-50' : 'hover:bg-gray-50'}
+              ${i === selectedIndex
+                ? 'bg-indigo-50 dark:bg-indigo-900/30'
+                : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}
             `}
           >
             <span className={`
               flex items-center justify-center w-8 h-8 rounded-lg text-xs font-bold shrink-0
               ${i === selectedIndex
-                ? 'bg-indigo-100 text-indigo-700'
-                : 'bg-gray-100 text-gray-600'}
+                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}
             `}>
               {cmd.icon}
             </span>
             <div>
               <div className={`text-sm font-medium ${
-                i === selectedIndex ? 'text-indigo-700' : 'text-gray-800'
+                i === selectedIndex
+                  ? 'text-indigo-700 dark:text-indigo-300'
+                  : 'text-gray-800 dark:text-gray-200'
               }`}>
                 {cmd.label}
               </div>
-              <div className="text-xs text-gray-400">{cmd.description}</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500">{cmd.description}</div>
             </div>
           </button>
         ))}

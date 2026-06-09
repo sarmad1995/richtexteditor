@@ -162,7 +162,7 @@ export function Editor({ username, userColor, onStatusChange }: Props) {
           </div>
 
           {/* ── Word count footer ───────────────────────────────────────────── */}
-          <div className="shrink-0 border-t border-gray-100 px-16 py-2 flex items-center justify-between text-xs text-gray-400 select-none">
+          <div className="shrink-0 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 px-16 py-2 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 select-none transition-colors duration-200">
             <span>{plural(wordCount.words, 'word')}</span>
             <span>{wordCount.chars.toLocaleString()} characters</span>
           </div>
