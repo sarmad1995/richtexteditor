@@ -104,15 +104,6 @@ body {
   opacity: 0.6;
 }
 
-.editor-content code {
-  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
-  font-size: 0.875em;
-  background: var(--editor-code-bg);
-  border-radius: 4px;
-  padding: 2px 5px;
-  color: var(--editor-code-color);
-}
-
 /* Blockquote */
 .editor-quote {
   border-left: 3px solid var(--editor-quote-border);

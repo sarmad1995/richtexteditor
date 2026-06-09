@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react'
 import type { UserIdentity } from '../hooks/useUsername'
-import type { ConnStatus } from '../App'
+import type { ConnStatus, Collaborator } from './types'
 
 const TITLE_KEY = 'rte_doc_title'
 
@@ -11,14 +11,15 @@ const STATUS_CONFIG: Record<ConnStatus, { color: string; label: string; pulse: b
 }
 
 interface Props {
-  identity:      UserIdentity | null
-  onRenameUser:  (name: string) => void
-  connStatus:    ConnStatus
-  isDark:        boolean
-  onToggleTheme: () => void
+  identity:               UserIdentity | null
+  onRenameUser:           (name: string) => void
+  connStatus:             ConnStatus
+  isDark:                 boolean
+  onToggleTheme:          () => void
+  collaborators:          Collaborator[]
 }
 
-export function Header({ identity, onRenameUser, connStatus, isDark, onToggleTheme }: Props) {
+export function Header({ identity, onRenameUser, connStatus, isDark, onToggleTheme, collaborators }: Props) {
   const st = STATUS_CONFIG[connStatus]
 
   // ── Document title ────────────────────────────────────────────────────────
@@ -45,9 +46,10 @@ export function Header({ identity, onRenameUser, connStatus, isDark, onToggleThe
   const [nameValue, setNameValue] = useState(identity?.name ?? '')
   const nameInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { if (identity?.name) setNameValue(identity.name) }, [identity?.name])
-
   const startEditingName = () => {
+    // Sync nameValue to the current identity before opening the input,
+    // so edits always start from the latest saved name.
+    setNameValue(identity?.name ?? '')
     setEditingName(true)
     setTimeout(() => nameInputRef.current?.select(), 0)
   }
@@ -102,8 +104,36 @@ export function Header({ identity, onRenameUser, connStatus, isDark, onToggleThe
         <span>{st.label}</span>
       </div>
 
-      {/* Right — theme toggle + username */}
+      {/* Right — avatar stack + theme toggle + editable name */}
       <div className="flex items-center gap-3">
+
+        {/* Avatar stack: peers first, then "you" at the end */}
+        {identity && (
+          <div className="flex items-center">
+            {collaborators.slice(0, 5).map((c, i) => (
+              <AvatarChip
+                key={c.clientId}
+                name={c.name}
+                color={c.color}
+                index={i}
+                isYou={false}
+              />
+            ))}
+            {collaborators.length > 5 && (
+              <OverflowChip
+                count={collaborators.length - 5}
+                index={5}
+              />
+            )}
+            <AvatarChip
+              name={identity.name}
+              color={identity.color}
+              index={Math.min(collaborators.length, 5) + (collaborators.length > 5 ? 1 : 0)}
+              isYou={true}
+            />
+          </div>
+        )}
+
         {/* Sun / Moon toggle */}
         <button
           type="button"
@@ -114,40 +144,93 @@ export function Header({ identity, onRenameUser, connStatus, isDark, onToggleThe
           {isDark ? <SunIcon /> : <MoonIcon />}
         </button>
 
-        {/* Username chip */}
+        {/* Editable name — click to rename */}
         {identity && (
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: identity.color }} />
-            {editingName ? (
-              <input
-                ref={nameInputRef}
-                value={nameValue}
-                onChange={e => setNameValue(e.target.value)}
-                onBlur={commitName}
-                onKeyDown={handleNameKey}
-                maxLength={32}
-                className="text-sm text-gray-700 dark:text-gray-200 bg-transparent border-b border-indigo-400 outline-none w-28"
-                autoFocus
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={startEditingName}
-                title="Click to change your name"
-                className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group"
-              >
-                <span>{identity.name}</span>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
-                  className="opacity-0 group-hover:opacity-60 transition-opacity">
-                  <path d="M8.5 1.5l2 2-6 6H2.5v-2l6-6z"
-                    stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            )}
-          </div>
+          editingName ? (
+            <input
+              ref={nameInputRef}
+              value={nameValue}
+              onChange={e => setNameValue(e.target.value)}
+              onBlur={commitName}
+              onKeyDown={handleNameKey}
+              maxLength={32}
+              className="text-sm text-gray-700 dark:text-gray-200 bg-transparent border-b border-indigo-400 outline-none w-28"
+              autoFocus
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={startEditingName}
+              title="Click to change your name"
+              className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group"
+            >
+              <span>{identity.name}</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+                className="opacity-0 group-hover:opacity-60 transition-opacity">
+                <path d="M8.5 1.5l2 2-6 6H2.5v-2l6-6z"
+                  stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )
         )}
       </div>
     </header>
+  )
+}
+
+function getInitials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map(w => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+}
+
+interface AvatarChipProps {
+  name: string
+  color: string
+  index: number
+  isYou: boolean
+}
+
+function AvatarChip({ name, color, index, isYou }: AvatarChipProps) {
+  const ringClass = isYou
+    ? 'ring-2 ring-indigo-400 ring-offset-1 ring-offset-white dark:ring-offset-gray-900'
+    : 'border-2 border-white dark:border-gray-900'
+
+  return (
+    <div
+      className="relative group"
+      style={{ marginLeft: index === 0 ? 0 : -8, zIndex: 10 - index }}
+    >
+      {/* Avatar circle */}
+      <div
+        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white select-none cursor-default transition-transform duration-150 group-hover:scale-110 group-hover:z-20 ${ringClass}`}
+        style={{ backgroundColor: color }}
+      >
+        {getInitials(name)}
+      </div>
+
+      {/* Tooltip — drops below the header so it's never clipped at the top */}
+      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 px-2 py-1 rounded-md shadow-lg bg-gray-900 dark:bg-gray-700 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900 dark:border-b-gray-700" />
+        {isYou ? `${name} (you)` : name}
+      </div>
+    </div>
+  )
+}
+
+function OverflowChip({ count, index }: { count: number; index: number }) {
+  return (
+    <div
+      className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 border-2 border-white dark:border-gray-900 flex items-center justify-center text-xs font-semibold text-gray-600 dark:text-gray-300 select-none cursor-default"
+      style={{ marginLeft: -8, zIndex: 10 - index }}
+      title={`${count} more`}
+    >
+      +{count}
+    </div>
   )
 }
 

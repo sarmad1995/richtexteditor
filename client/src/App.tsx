@@ -4,17 +4,22 @@ import { Header } from './components/Header'
 import { UsernameModal } from './components/UsernameModal'
 import { useUsername } from './hooks/useUsername'
 import { useTheme } from './hooks/useTheme'
-import './App.css'
+import type { ConnStatus, Collaborator } from './components/types'
 
-export type ConnStatus = 'connected' | 'connecting' | 'disconnected'
+export type { ConnStatus, Collaborator }
 
 export default function App() {
   const { identity, save } = useUsername()
   const { isDark, toggle: toggleTheme } = useTheme()
   const [connStatus, setConnStatus] = useState<ConnStatus>('connecting')
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([])
 
   const handleStatusChange = useCallback((s: ConnStatus) => {
     setConnStatus(s)
+  }, [])
+
+  const handleCollaboratorsChange = useCallback((peers: Collaborator[]) => {
+    setCollaborators(peers)
   }, [])
 
   return (
@@ -27,6 +32,7 @@ export default function App() {
         connStatus={connStatus}
         isDark={isDark}
         onToggleTheme={toggleTheme}
+        collaborators={collaborators}
       />
 
       <main className="flex-1 flex justify-center py-8 px-4">
@@ -36,6 +42,7 @@ export default function App() {
               username={identity.name}
               userColor={identity.color}
               onStatusChange={handleStatusChange}
+              onCollaboratorsChange={handleCollaboratorsChange}
             />
           )}
         </div>

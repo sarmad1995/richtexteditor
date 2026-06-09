@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useRef, useLayoutEffect } from 'react'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
@@ -27,10 +27,9 @@ import { ToolbarPlugin } from './plugins/ToolbarPlugin'
 import { FloatingToolbarPlugin } from './plugins/FloatingToolbarPlugin'
 import { SlashCommandPlugin } from './plugins/SlashCommandPlugin'
 import { WordCountPlugin } from './plugins/WordCountPlugin'
-import type { ToolbarState } from './types'
-import type { ConnStatus } from '../App'
+import type { ToolbarState, ConnStatus, Collaborator } from './types'
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:1234'
 const ROOM_ID = 'main-doc'
@@ -45,7 +44,7 @@ const MD_TRANSFORMERS = [
 ]
 
 // editorState must be null — Yjs owns document state when CollaborationPlugin is used
-const initialConfig = {
+const EDITOR_CONFIG = {
   namespace: 'RichTextEditor',
   nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, CodeNode, CodeHighlightNode, DrawingNode],
   editorState: null,
@@ -69,9 +68,13 @@ const initialConfig = {
   },
 }
 
-const defaultToolbarState: ToolbarState = {
+const DEFAULT_TOOLBAR_STATE: ToolbarState = {
   isBold: false, isItalic: false, isUnderline: false,
   isStrikethrough: false, blockType: 'paragraph',
+}
+
+function plural(n: number, word: string) {
+  return `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -80,34 +83,35 @@ interface Props {
   username: string
   userColor: string
   onStatusChange: (status: ConnStatus) => void
+  onCollaboratorsChange: (peers: Collaborator[]) => void
 }
 
-export function Editor({ username, userColor, onStatusChange }: Props) {
-  const [toolbarState, setToolbarState] = useState<ToolbarState>(defaultToolbarState)
+export function Editor({ username, userColor, onStatusChange, onCollaboratorsChange }: Props) {
+  const [toolbarState, setToolbarState] = useState<ToolbarState>(DEFAULT_TOOLBAR_STATE)
   const [wordCount, setWordCount] = useState({ words: 0, chars: 0 })
 
-  // Ref trick: keeps the callback reference stable so providerFactory (useCallback [])
-  // never needs to be recreated, yet always calls the latest onStatusChange.
+  // Ref trick: keeps callbacks stable so providerFactory (empty deps) never
+  // needs to be recreated, yet always calls the latest version.
   const onStatusChangeRef = useRef(onStatusChange)
-  onStatusChangeRef.current = onStatusChange
+  const onCollaboratorsChangeRef = useRef(onCollaboratorsChange)
 
-  const handleToolbarState = useCallback((state: ToolbarState) => {
-    setToolbarState(state)
-  }, [])
+  // Update refs after each render (useLayoutEffect so they're current before
+  // any effects or event handlers fire — avoids the "stale closure" problem).
+  useLayoutEffect(() => {
+    onStatusChangeRef.current = onStatusChange
+    onCollaboratorsChangeRef.current = onCollaboratorsChange
+  })
 
-  const handleWordCount = useCallback((words: number, chars: number) => {
-    setWordCount({ words, chars })
-  }, [])
+  const handleToolbarState = useCallback((state: ToolbarState) => setToolbarState(state), [])
+  const handleWordCount = useCallback((words: number, chars: number) => setWordCount({ words, chars }), [])
 
-  // providerFactory is called exactly once by CollaborationPlugin on mount.
-  // It must be stable (empty deps) — if it changes, CollaborationPlugin tears
-  // down and recreates the Yjs connection.
+  // Called exactly once by CollaborationPlugin on mount — must be stable.
   const providerFactory = useCallback((id: string, yjsDocMap: Map<string, Y.Doc>) => {
     const doc = new Y.Doc()
     yjsDocMap.set(id, doc)
     const provider = new WebsocketProvider(WS_URL, id, doc)
 
-    // Relay WebSocket status events up to the App
+    // WebSocket status → App
     provider.on('status', ({ status }: { status: string }) => {
       const s: ConnStatus =
         status === 'connected' ? 'connected' :
@@ -116,16 +120,26 @@ export function Editor({ username, userColor, onStatusChange }: Props) {
       onStatusChangeRef.current(s)
     })
 
+    // Yjs awareness (presence) → App
+    const broadcastPeers = () => {
+      const states = provider.awareness.getStates() as Map<number, { name?: string; color?: string }>
+      const myId = provider.awareness.clientID
+      const peers: Collaborator[] = []
+      states.forEach((state, clientId) => {
+        if (clientId !== myId && state.name) {
+          peers.push({ clientId, name: state.name, color: state.color ?? '#6366f1' })
+        }
+      })
+      onCollaboratorsChangeRef.current(peers)
+    }
+    provider.awareness.on('change', broadcastPeers)
+
     return provider
   }, []) // intentionally empty — stable reference
 
-  const config = useMemo(() => ({ ...initialConfig }), [])
-
-  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
-
   return (
     <LexicalCollaboration>
-      <LexicalComposer initialConfig={config}>
+      <LexicalComposer initialConfig={EDITOR_CONFIG}>
         <div className="flex flex-col h-full">
           <Toolbar state={toolbarState} />
 
@@ -139,7 +153,7 @@ export function Editor({ username, userColor, onStatusChange }: Props) {
                 />
               }
               placeholder={
-                <div className="editor-placeholder px-16 py-12 pointer-events-none select-none text-gray-400">
+                <div className="editor-placeholder px-16 py-12 pointer-events-none select-none">
                   Start writing…
                 </div>
               }
@@ -161,7 +175,7 @@ export function Editor({ username, userColor, onStatusChange }: Props) {
             />
           </div>
 
-          {/* ── Word count footer ───────────────────────────────────────────── */}
+          {/* Word count footer */}
           <div className="shrink-0 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 px-16 py-2 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 select-none transition-colors duration-200">
             <span>{plural(wordCount.words, 'word')}</span>
             <span>{wordCount.chars.toLocaleString()} characters</span>
