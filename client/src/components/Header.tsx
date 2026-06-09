@@ -1,14 +1,23 @@
 import { useRef, useState, useEffect } from 'react'
 import type { UserIdentity } from '../hooks/useUsername'
+import type { ConnStatus } from '../App'
 
 const TITLE_KEY = 'rte_doc_title'
+
+const STATUS_CONFIG: Record<ConnStatus, { color: string; label: string; pulse: boolean }> = {
+  connected:    { color: '#22c55e', label: 'Live',          pulse: true  },
+  connecting:   { color: '#f59e0b', label: 'Connecting…',   pulse: false },
+  disconnected: { color: '#ef4444', label: 'Offline',       pulse: false },
+}
 
 interface Props {
   identity: UserIdentity | null
   onRenameUser: (name: string) => void
+  connStatus: ConnStatus
 }
 
-export function Header({ identity, onRenameUser }: Props) {
+export function Header({ identity, onRenameUser, connStatus }: Props) {
+  const st = STATUS_CONFIG[connStatus]
   // ── Document title ────────────────────────────────────────────────────────
   const [title, setTitle] = useState(() => localStorage.getItem(TITLE_KEY) ?? 'Untitled document')
   const [editingTitle, setEditingTitle] = useState(false)
@@ -81,6 +90,23 @@ export function Header({ identity, onRenameUser }: Props) {
             {title}
           </span>
         )}
+      </div>
+
+      {/* Centre — connection status pill */}
+      <div className="flex items-center gap-1.5 text-xs text-gray-500 select-none">
+        <span className="relative flex h-2 w-2">
+          {st.pulse && (
+            <span
+              className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+              style={{ backgroundColor: st.color }}
+            />
+          )}
+          <span
+            className="relative inline-flex rounded-full h-2 w-2"
+            style={{ backgroundColor: st.color }}
+          />
+        </span>
+        <span>{st.label}</span>
       </div>
 
       {/* Right — username chip (hidden until identity is set) */}

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
@@ -8,7 +8,6 @@ import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary'
 import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin'
 import { CollaborationPlugin } from '@lexical/react/LexicalCollaborationPlugin'
 import { LexicalCollaboration } from '@lexical/react/LexicalCollaborationContext'
-import type { EditorState } from 'lexical'
 import {
   HEADING, QUOTE, CODE,
   UNORDERED_LIST, ORDERED_LIST,
@@ -27,14 +26,13 @@ import { Toolbar } from './Toolbar'
 import { ToolbarPlugin } from './plugins/ToolbarPlugin'
 import { FloatingToolbarPlugin } from './plugins/FloatingToolbarPlugin'
 import { SlashCommandPlugin } from './plugins/SlashCommandPlugin'
+import { WordCountPlugin } from './plugins/WordCountPlugin'
 import type { ToolbarState } from './types'
+import type { ConnStatus } from '../App'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-// Point to local server during development; swap this for the Railway URL before deploy
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:1234'
-
-// All editors sharing the same ROOM_ID see the same document
 const ROOM_ID = 'main-doc'
 
 const MD_TRANSFORMERS = [
@@ -46,15 +44,12 @@ const MD_TRANSFORMERS = [
   INLINE_CODE, STRIKETHROUGH,
 ]
 
-// editorState MUST be null when using CollaborationPlugin —
-// Yjs owns the document state, not the LexicalComposer initializer.
+// editorState must be null — Yjs owns document state when CollaborationPlugin is used
 const initialConfig = {
   namespace: 'RichTextEditor',
   nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, CodeNode, CodeHighlightNode, DrawingNode],
   editorState: null,
-  onError(error: Error) {
-    console.error(error)
-  },
+  onError(error: Error) { console.error(error) },
   theme: {
     text: {
       bold: 'font-bold',
@@ -63,11 +58,7 @@ const initialConfig = {
       strikethrough: 'line-through',
       code: 'editor-inline-code',
     },
-    heading: {
-      h1: 'editor-h1',
-      h2: 'editor-h2',
-      h3: 'editor-h3',
-    },
+    heading: { h1: 'editor-h1', h2: 'editor-h2', h3: 'editor-h3' },
     list: {
       ul: 'list-disc pl-6',
       ol: 'list-decimal pl-6',
@@ -79,23 +70,8 @@ const initialConfig = {
 }
 
 const defaultToolbarState: ToolbarState = {
-  isBold: false,
-  isItalic: false,
-  isUnderline: false,
-  isStrikethrough: false,
-  blockType: 'paragraph',
-}
-
-// ─── Provider factory (called once by CollaborationPlugin) ─────────────────────
-// Must return a Yjs provider. We keep this outside the component so it isn't
-// recreated on every render.
-function providerFactory(
-  id: string,
-  yjsDocMap: Map<string, Y.Doc>,
-): WebsocketProvider {
-  const doc = new Y.Doc()
-  yjsDocMap.set(id, doc)
-  return new WebsocketProvider(WS_URL, id, doc)
+  isBold: false, isItalic: false, isUnderline: false,
+  isStrikethrough: false, blockType: 'paragraph',
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -103,63 +79,95 @@ function providerFactory(
 interface Props {
   username: string
   userColor: string
+  onStatusChange: (status: ConnStatus) => void
 }
 
-export function Editor({ username, userColor }: Props) {
+export function Editor({ username, userColor, onStatusChange }: Props) {
   const [toolbarState, setToolbarState] = useState<ToolbarState>(defaultToolbarState)
+  const [wordCount, setWordCount] = useState({ words: 0, chars: 0 })
 
-  const handleStateChange = useCallback((state: ToolbarState) => {
+  // Ref trick: keeps the callback reference stable so providerFactory (useCallback [])
+  // never needs to be recreated, yet always calls the latest onStatusChange.
+  const onStatusChangeRef = useRef(onStatusChange)
+  onStatusChangeRef.current = onStatusChange
+
+  const handleToolbarState = useCallback((state: ToolbarState) => {
     setToolbarState(state)
   }, [])
 
-  // useMemo so the config object is stable across renders
+  const handleWordCount = useCallback((words: number, chars: number) => {
+    setWordCount({ words, chars })
+  }, [])
+
+  // providerFactory is called exactly once by CollaborationPlugin on mount.
+  // It must be stable (empty deps) — if it changes, CollaborationPlugin tears
+  // down and recreates the Yjs connection.
+  const providerFactory = useCallback((id: string, yjsDocMap: Map<string, Y.Doc>) => {
+    const doc = new Y.Doc()
+    yjsDocMap.set(id, doc)
+    const provider = new WebsocketProvider(WS_URL, id, doc)
+
+    // Relay WebSocket status events up to the App
+    provider.on('status', ({ status }: { status: string }) => {
+      const s: ConnStatus =
+        status === 'connected' ? 'connected' :
+        status === 'connecting' ? 'connecting' :
+        'disconnected'
+      onStatusChangeRef.current(s)
+    })
+
+    return provider
+  }, []) // intentionally empty — stable reference
+
   const config = useMemo(() => ({ ...initialConfig }), [])
+
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
   return (
     <LexicalCollaboration>
-    <LexicalComposer initialConfig={config}>
-      <div className="flex flex-col h-full">
-        <Toolbar state={toolbarState} />
-        <div className="flex-1 relative overflow-y-auto">
-          <RichTextPlugin
-            contentEditable={
-              <ContentEditable
-                className="editor-content px-16 py-12 min-h-full focus:outline-none"
-                aria-label="Rich text editor"
-              />
-            }
-            placeholder={
-              <div className="editor-placeholder px-16 py-12 pointer-events-none select-none text-gray-400">
-                Start writing…
-              </div>
-            }
-            ErrorBoundary={LexicalErrorBoundary}
-          />
-          <HistoryPlugin />
-          <ListPlugin />
-          <MarkdownShortcutPlugin transformers={MD_TRANSFORMERS} />
-          <ToolbarPlugin onStateChange={handleStateChange} />
-          <FloatingToolbarPlugin />
-          <SlashCommandPlugin />
+      <LexicalComposer initialConfig={config}>
+        <div className="flex flex-col h-full">
+          <Toolbar state={toolbarState} />
 
-          {/*
-           * CollaborationPlugin wires Lexical ↔ Yjs.
-           * - id: room name — all clients with the same id share a document
-           * - providerFactory: creates the WebsocketProvider (called once)
-           * - shouldBootstrap: true = start with an empty doc if the room is new
-           * - username/cursorColor: sent via Yjs awareness to other clients
-           *   so they can render this user's cursor label
-           */}
-          <CollaborationPlugin
-            id={ROOM_ID}
-            providerFactory={providerFactory}
-            shouldBootstrap={true}
-            username={username}
-            cursorColor={userColor}
-          />
+          {/* Scrollable content area */}
+          <div className="flex-1 relative overflow-y-auto">
+            <RichTextPlugin
+              contentEditable={
+                <ContentEditable
+                  className="editor-content px-16 py-12 min-h-full focus:outline-none"
+                  aria-label="Rich text editor"
+                />
+              }
+              placeholder={
+                <div className="editor-placeholder px-16 py-12 pointer-events-none select-none text-gray-400">
+                  Start writing…
+                </div>
+              }
+              ErrorBoundary={LexicalErrorBoundary}
+            />
+            <HistoryPlugin />
+            <ListPlugin />
+            <MarkdownShortcutPlugin transformers={MD_TRANSFORMERS} />
+            <ToolbarPlugin onStateChange={handleToolbarState} />
+            <FloatingToolbarPlugin />
+            <SlashCommandPlugin />
+            <WordCountPlugin onChange={handleWordCount} />
+            <CollaborationPlugin
+              id={ROOM_ID}
+              providerFactory={providerFactory}
+              shouldBootstrap={true}
+              username={username}
+              cursorColor={userColor}
+            />
+          </div>
+
+          {/* ── Word count footer ───────────────────────────────────────────── */}
+          <div className="shrink-0 border-t border-gray-100 px-16 py-2 flex items-center justify-between text-xs text-gray-400 select-none">
+            <span>{plural(wordCount.words, 'word')}</span>
+            <span>{wordCount.chars.toLocaleString()} characters</span>
+          </div>
         </div>
-      </div>
-    </LexicalComposer>
+      </LexicalComposer>
     </LexicalCollaboration>
   )
 }
