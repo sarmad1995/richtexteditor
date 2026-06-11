@@ -78,7 +78,7 @@ function DrawingComponent({ data, nodeKey }: { data: string; nodeKey: NodeKey })
 
 // ─── Lexical node ─────────────────────────────────────────────────────────────
 
-export class DrawingNode extends DecoratorNode<JSX.Element> {
+export class DrawingNode extends DecoratorNode<React.JSX.Element> {
   __data: string
 
   static getType(): string { return 'drawing' }
@@ -114,7 +114,7 @@ export class DrawingNode extends DecoratorNode<JSX.Element> {
     this.getWritable().__data = data
   }
 
-  decorate(): JSX.Element {
+  decorate(): React.JSX.Element {
     return <DrawingComponent data={this.__data} nodeKey={this.__key} />
   }
 }
